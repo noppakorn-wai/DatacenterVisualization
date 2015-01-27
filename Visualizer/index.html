@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Basic sigma.js example</title>
+  <style type="text/css">
+    body {
+      color: #333;
+      font-size: 14px;
+      font-family: Lato, sans-serif;
+    }
+    #container {
+      position: absolute;
+      width: 75%;
+      height: 98%;
+    }
+		#control-pane {
+      top: 10px;
+      /*bottom: 10px;*/
+      right: 10px;
+      position: absolute;
+      width: 200px;
+      background-color: rgb(249, 247, 237);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+		#alert-pane {
+      top: 10px;
+      left: 0px;
+      position: absolute;
+      width: 200px;
+      background-color: rgb(255, 165, 0);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+			color: white;
+    }
+    #control-pane > div {
+      margin: 10px;
+      overflow-x: auto;
+    }
+    h2, h3, h4 {
+      padding: 0;
+      font-variant: small-caps;
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+	<div id="breadcrumb" style="position:absolute;left:10px;bottom:10px;background-color:rgb(249, 247, 237);"></div>
+	<!--<div class="go" id="alert-pane" style="padding-left:10px;padding-right:10px;">
+		<a class="go"><h2>Warnning</h2></a>
+	</div>-->
+	<div id="control-pane" style="padding-left:10px;padding-right:10px;">
+    <h2 class="underline">Data navigator</h2><hr/>
+    <div>
+      <h3>Search</h3>
+			<div id="searchCounter"></div>
+			<input type="text" value="" name="s" id="search"/>
+    </div>
+    <div>
+      <h3>Filter by catagories</h3>
+      <select id="node-category">
+        <option value="all">Default</option>
+      </select>
+    </div>
+		<div style="height:125px;">
+			<h3>Data</h3>
+			<div id = "node-data">
+			</div>
+		</div>
+   </div>
+  <script src="./js/sigma.min.js"></script>
+	<script src="./js/sigma-plugins/sigma.plugins.animate.min.js"></script>
+	<script src="./js/sigma-plugins/sigma.plugins.filter.min.js"></script>
+	<script src="./js/sigma-plugins/sigma.renderers.customShapes.min.js"></script>
+	<script src="./js/jquery.min.js"></script>
+	<script src="./js/data.network.js"></script>
+	<script src="./js/vis.js"></script>
+	<script src="./js/custom.node.js"></script>
+  <script>
+    // Let's first initialize sigma:
+    var s = new sigma({
+			renderer: {
+				container: document.getElementById('container'),
+				type: 'canvas'
+			},
+			settings: {
+				edgeColor: "default",
+				defaultEdgeColor: "#eee",
+				nodesPowRatio: 1,
+				edgesPowRatio: 1,
+				animationsTime: 1000,
+				autoRescale: false,
+				autoResize: false,
+				maxNodeSize: 23,
+				defaultLabelSize: 12
+			}
+    });
+		
+		CustomShapes.init(s);
+		var shapeIcon = {
+			"ROOT" : "img/ROOT.png",
+			"Datacenter" : "img/Datacenter.png",
+			"Cluster" : "img/Cluster.png",
+			"Host" : "img/Host.png",
+			"VM" : "img/VM.png",
+			"NW" : "img/Network.png",
+			"Storage" : "img/Storage.png"
+		};
+		
+		nodes.forEach(function(node) {
+			node.x = -200;
+			node.y = -200;
+			node.new_x = node.old_x = node.x;
+			node.new_y = node.old_y = node.y;
+			node.new_size = node.old_size = node.size;
+			node.color = "#fff";
+			node.new_color = node.old_color = node.color;
+			node.type = "vist";
+			
+			var r = Math.random()*1000;
+			
+			if(node.cat==="Host") {
+				if (r>900)					node.borderColor = "#ff2a2a";
+				else if (r>800)	node.borderColor = "#ffa500";
+				else								node.borderColor = "#26c453";
+			} else if(node.cat==="VM") {
+				if (r>900)					node.borderColor = "#ff2a2a";
+				else if (r>800)	node.borderColor = "#ffa500";
+				else								node.borderColor = "#26c453";
+			} else if(node.cat==="Network") {
+				if (r>900)					node.borderColor = "#ff2a2a";
+				else if (r>800)	node.borderColor = "#ffa500";
+				else								node.borderColor = "#26c453";
+			} else {
+				node.borderColor = "#000";
+			};
+			
+			node.toLink = function() {
+				return " / <a style=\"color:brown;text-decoration:underline;cursor:pointer;\" class=\"nodeLink\" onclick=\"s.dispatchEvent('clickNode', {node:s.graph.nodes('" + this.id + "')})\">" + this.label + "</a>";
+			};
+			
+			node.image = {
+				url: shapeIcon[node.cat]
+			};
+			s.graph.addNode(node);
+		});
+
+		edges.forEach(function(edge) {
+			edge.hover_color = '#000';
+			edge.size = 2;
+			s.graph.addEdge(edge);
+		});
+		
+		var root = wai.jit.computeRgraph(s.graph, "ROOT");
+		wai.jit.setPos(s.graph, root, s.settings("maxNodeSize"));
+		var step = 0;
+		var prefix = ['old_', 'new_'][step = +!step];
+		sigma.plugins.animate(
+			s,
+			{
+				x: prefix + 'x',
+				y: prefix + 'y',
+				size: prefix + 'size',
+				color: prefix + 'color'
+			}
+		);
+		while(s.camera.isAnimated)
+			s.camera.goTo({x: root.x, y: root.y, ratio: 1});
+		$('#breadcrumb').html(root.toLink());
+		$("#node-data").html("Node ID:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + root.id + "<br/>Node type:&nbsp;&nbsp;&nbsp;" + root.cat + "<br/>Node name: " + root.label + "<br/>Status:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fine");
+  </script>
+	<script src="./js/custom.filter.js"></script>
+	<script src="./js/custom.event.js"></script>
+	<script>
+			//[TODO] DRY!!!!
+			$(".go").on("click",function(){
+				$("#node-category").val("all");
+				$("#node-category").change();
+				var root = wai.jit.computeRgraph(s.graph, "ROOT");
+				wai.jit.setPos(s.graph, root, s.settings("maxNodeSize"));
+				var step = 0;
+				var prefix = ['old_', 'new_'][step =  + !step];
+				sigma.plugins.animate(
+					s, {
+					x : prefix + 'x',
+					y : prefix + 'y',
+					size : prefix + 'size',
+					color : prefix + 'color'
+				});
+				while (s.camera.isAnimated)
+					s.camera.goTo({
+						x : root.x,
+						y : root.y,
+						ratio : 1
+					});
+				$("#node-data").html("Node ID:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + root.id + "<br/>Node type:&nbsp;&nbsp;&nbsp;" + root.cat + "<br/>Node name: " + root.label + "<br/>Status:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fine");
+			});
+		</script>
+</body>
+</html>
